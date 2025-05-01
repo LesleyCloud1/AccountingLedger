@@ -1,218 +1,386 @@
 package com.pluralsight;
-import java.io.FileNotFoundException;
+
 import java.io.File;
-import java.util.Scanner;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 public class AccountingLedgerApp {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in); //read user input
-        boolean running = true; // Loop will run until the user says "exit"
 
+    //Transactions.csv file where all transactions will be stored
+    private static final String TRANSACTION_FILE = "transactions.csv";
+
+    //List to keep all transaction records in memory
+    private static List<Transaction> transactions = new ArrayList<>();
+
+    public static void main(String[] args) {
+        //Check if the file exists; if not, create it
+        File file = new File(TRANSACTION_FILE);
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+                System.out.println("Created new transactions.csv file.");
+            } catch (IOException e) {
+                System.out.println("Error creating transactions file: " + e.getMessage());
+            }
+        }
+
+        //Scanner to read user input from the console
+        Scanner scanner = new Scanner(System.in);
+        boolean running = true;
+
+        // ======= Main Menu Loop =======
         while (running) {
-            //HomeScreen
-            System.out.println("\n---------Welcome to Accounting Ledger Application-----");
+            System.out.println("\n===== Welcome to your Account =====");
             System.out.println("1: Make Deposit");
             System.out.println("2: Make Payment");
             System.out.println("3: View Account Transactions");
             System.out.println("4: Exit");
-            System.out.println("Select Option #1-4: ");
+            System.out.print("Choose option #1-4: ");
+            String choice = scanner.nextLine().trim();
 
-            String choice = scanner.nextLine().trim();//trim removes extra spaces on user input
-
-            if (choice.equals("1") || choice.equals("D")) {
-                System.out.println("\n---- Make Deposit ----");
-                //Ask user for deposit details this info will be saved to transactions csv file
-                System.out.print("Enter date (YYYY-MM-DD): ");
+            // === Option 1: Deposit ===
+            if (choice.equals("1")) {
+                System.out.println("\n--- Make Deposit ---");
+                System.out.print("Date (YYYY-MM-DD): ");
                 String date = scanner.nextLine().trim();
-                System.out.print("Enter time (HH:MM:SS): ");
+                System.out.print("Time (HH:MM:SS): ");
                 String time = scanner.nextLine().trim();
-                System.out.print("Enter Description: ");
+                System.out.print("Description: ");
                 String description = scanner.nextLine().trim();
-                System.out.print("Enter Vendor: ");
+                System.out.print("Vendor: ");
                 String vendor = scanner.nextLine().trim();
-                System.out.print("Enter Amount: ");
+                System.out.print("Amount: ");
                 String amount = scanner.nextLine().trim();
 
-                //Confirm user data
-                System.out.println("\n Deposit Confirmation:");
-                System.out.println(date + "|" + time + "|" + description + "|" + vendor + "|" + amount);
+                //Save the deposit to file
+                saveTransaction(date, time, description, vendor, amount);
+                System.out.println("Deposit saved!");
 
-                //Save deposit data to transactions.csv
-                try (FileWriter writer = new FileWriter("transactions.csv", true)) {
-                    writer.write(date + "|" + time + "|" + description + "|" + vendor + "|" + amount + "\n");
-                    System.out.println("Deposit saved to transactions.csv");
-                } catch (IOException e) {
-                    System.out.println("Error saving deposit: " + e.getMessage());
-                }
-
-            } else if (choice.equals("2") || choice.equals("P")) {
-                System.out.println("\n---- Make Payment ----");
-                //Ask user for payment details this info will be saved to transactions csv file
-                System.out.print("Enter date (YYYY-MM-DD): ");
+            }
+            //
+            else if (choice.equals("2")) {
+                System.out.println("\n--- Make Payment ---");
+                System.out.print("Date (YYYY-MM-DD): ");
                 String date = scanner.nextLine().trim();
-                System.out.print("Enter time (HH:MM:SS): ");
+                System.out.print("Time (HH:MM:SS): ");
                 String time = scanner.nextLine().trim();
-                System.out.print("Enter description: ");
+                System.out.print("Description: ");
                 String description = scanner.nextLine().trim();
-                System.out.print("Enter vendor: ");
+                System.out.print("Vendor: ");
                 String vendor = scanner.nextLine().trim();
-                System.out.print("Enter Amount: ");
+                System.out.print("Amount: ");
                 String amount = scanner.nextLine().trim();
-                //Create minus sign for negative number
+
+                //Payments are stored as negative values
                 if (!amount.startsWith("-")) {
                     amount = "-" + amount;
                 }
-                //Confirm user data
-                System.out.println("\n Payment Confirmation:");
-                System.out.println(date + "|" + time + "|" + description + "|" + vendor + "|" + amount);
 
-                //Save payment data to transactions.csv
-                try (FileWriter writer = new FileWriter("transactions.csv", true)) {
-                    writer.write(date + "|" + time + "|" + description + "|" + vendor + "|" + amount + "\n");
-                    System.out.println("Payment saved to transactions.csv");
-                } catch (IOException e) {
-                    System.out.println("Error saving deposit: " + e.getMessage());
-                }
-
-
-            } else if (choice.equals("3") || choice.equals("L")) {
-                boolean inLedgerMenu = true;
-
-                while (inLedgerMenu) {
-                    System.out.println("\n---- View Account Transactions ----");
-                    System.out.println("A: View All Transactions");
-                    System.out.println("D: View Deposits Only");
-                    System.out.println("P: View Payments Only");
-                    System.out.println("R: Reports");
-                    System.out.println("H: Return to Home");
-
-                    String ledgerChoice = scanner.nextLine().trim().toUpperCase();
-
-                    switch (ledgerChoice) {
-                        case "A":
-                            displayTransactions("ALL");
-                            break;
-                        case "D":
-                            displayTransactions("DEPOSITS");
-                            break;
-                        case "P":
-                            displayTransactions("PAYMENTS");
-                            break;
-                        case "R":
-                            showReportsMenu(scanner);
-                            break;
-                        case "H":
-                            inLedgerMenu = false;
-                            break;
-                        default:
-                            System.out.println("Invalid choice. Please enter A, D, P, R, or H.");
-                    }
-                }
-
-            } else if (choice.equals("4") || choice.equalsIgnoreCase("X")) {
-                System.out.println("Have a nice day!");
+                //Save the payment to file
+                saveTransaction(date, time, description, vendor, amount);
+                System.out.println("Payment saved!");
+            }
+            //View Transactions
+            else if (choice.equals("3")) {
+                showLedgerMenu(scanner);
+            }
+            //Exit ===
+            else if (choice.equals("4")) {
+                System.out.println("Have a blessed day!");
                 running = false;
-
-            } else {
-                System.out.println("Invalid input. Please select options #1-4.");
+            }
+            else {
+                System.out.println("Invalid option. Try again!");
             }
         }
 
         scanner.close();
     }
 
+    //This method saves a transaction to the CSV file
+    public static void saveTransaction(String date, String time, String description, String vendor, String amount) {
+        try (FileWriter writer = new FileWriter(TRANSACTION_FILE, true)) {
+            writer.write(date + "|" + time + "|" + description + "|" + vendor + "|" + amount + "\n");
+        } catch (IOException e) {
+            System.out.println("Error writing transaction: " + e.getMessage());
+        }
+    }
+
+    //Ledger Menu
+    public static void showLedgerMenu(Scanner scanner) {
+        boolean inLedgerMenu = true;
+
+        while (inLedgerMenu) {
+            System.out.println("\n--- Ledger Menu ---");
+            System.out.println("A: View All Transactions");
+            System.out.println("D: View Deposits Only");
+            System.out.println("P: View Payments Only");
+            System.out.println("R: Reports");
+            System.out.println("H: Return to Home Menu");
+
+            String choice = scanner.nextLine().trim().toUpperCase();
+
+            switch (choice) {
+                case "A":
+                    displayTransactions("ALL");
+                    break;
+                case "D":
+                    displayTransactions("DEPOSITS");
+                    break;
+                case "P":
+                    displayTransactions("PAYMENTS");
+                    break;
+                case "R":
+                    showReportsMenu(scanner);
+                    break;
+                case "H":
+                    inLedgerMenu = false;
+                    break;
+                default:
+                    System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    //Display type of transactions
     public static void displayTransactions(String type) {
         try {
-            File file = new File("transactions.csv");
+            File file = new File(TRANSACTION_FILE);
             Scanner fileScanner = new Scanner(file);
 
-            boolean hasData = false;
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine();
-                String[] parts = line.split("\\|");
-                String amountStr = parts[4].trim();
+            List<String> lines = new ArrayList<>();
 
-                switch (type) {
-                    case "ALL":
-                        System.out.println(line);
-                        hasData = true;
-                        break;
-                    case "DEPOSITS":
-                        if (!amountStr.startsWith("-")) {
-                            System.out.println(line);
-                            hasData = true;
-                        }
-                        break;
-                    case "PAYMENTS":
-                        if (amountStr.startsWith("-")) {
-                            System.out.println(line);
-                            hasData = true;
-                        }
-                        break;
+            while (fileScanner.hasNextLine()) {
+                lines.add(fileScanner.nextLine());
+            }
+            Collections.reverse(lines); // Show most recent first
+
+            boolean found = false;
+            for (String line : lines) {
+                String[] parts = line.split("\\|");
+                String amount = parts[4].trim();
+
+                if (type.equals("ALL") ||
+                        (type.equals("DEPOSITS") && !amount.startsWith("-")) ||
+                        (type.equals("PAYMENTS") && amount.startsWith("-"))) {
+                    System.out.println(line);
+                    found = true;
                 }
             }
-            fileScanner.close();
-            if (!hasData) {
+
+            if (!found) {
                 System.out.println("No " + type.toLowerCase() + " transactions found.");
             }
 
         } catch (FileNotFoundException e) {
-            System.out.println("Transaction file not found.");
+            System.out.println("Could not read transactions file.");
         }
     }
 
+    //Menu fo reports
     public static void showReportsMenu(Scanner scanner) {
-        boolean inReportsMenu = true;
-        while (inReportsMenu) {
-            System.out.println("\n---- Reports Menu ----");
+        boolean inReports = true;
+
+        while (inReports) {
+            System.out.println("\n--- Reports Menu ---");
             System.out.println("1: Month To Date");
             System.out.println("2: Previous Month");
-            System.out.println("3: Year To Date");
+            System.out.println("3: Year to Date");
             System.out.println("4: Previous Year");
             System.out.println("5: Search by Vendor");
-            System.out.println("0: Back to Ledger");
+            System.out.println("0: Back");
 
             String choice = scanner.nextLine().trim();
 
             switch (choice) {
                 case "1":
-                    System.out.println("Month To Date report not implemented yet.");
+                    generateMonthToDateReport();
                     break;
                 case "2":
-                    System.out.println("Previous Month report not implemented yet.");
+                    generatePreviousMonthReport();
                     break;
                 case "3":
-                    System.out.println("Year To Date report not implemented yet.");
+                    generateYearToDateReport();
                     break;
                 case "4":
-                    System.out.println("Previous Year report not implemented yet.");
+                    generatePreviousYearReport();
                     break;
                 case "5":
-                    System.out.print("Enter vendor name: ");
+                    System.out.print("Enter vendor name to search: ");
                     String vendor = scanner.nextLine().trim().toLowerCase();
                     searchByVendor(vendor);
                     break;
                 case "0":
-                    inReportsMenu = false;
+                    inReports = false;
                     break;
                 default:
-                    System.out.println("Invalid input. Please select 0-5.");
+                    System.out.println("Invalid option.");
             }
         }
     }
 
+    //Month to date option
+    public static void generateMonthToDateReport() {
+        try {
+            File file = new File(TRANSACTION_FILE);
+            Scanner scanner = new Scanner(file);
+
+            LocalDate today = LocalDate.now();
+            LocalDate startOfMonth = today.withDayOfMonth(1);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+            List<String> results = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split("\\|");
+                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                if ((date.isEqual(startOfMonth) || date.isAfter(startOfMonth)) && date.isBefore(today.plusDays(1))) {
+                    results.add(line);
+                }
+            }
+
+            System.out.println("\n--- Month To Date Transactions ---");
+            if (results.isEmpty()) {
+                System.out.println("No transactions found this month.");
+            } else {
+                for (String transaction : results) {
+                    System.out.println(transaction);
+                }
+            }
+
+            scanner.close();
+        } catch (Exception e) {
+            System.out.println("Error generating report: " + e.getMessage());
+        }
+    }
+    //Previous Month
+    public static void generatePreviousMonthReport() {
+        try {
+            File file = new File(TRANSACTION_FILE);
+            Scanner scanner = new Scanner(file);
+
+            LocalDate today = LocalDate.now();
+            LocalDate startOfPreviousMonth = today.minusMonths(1).withDayOfMonth(1);
+            LocalDate endOfPreviousMonth = startOfPreviousMonth.withDayOfMonth(startOfPreviousMonth.lengthOfMonth());
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            List<String> results = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split("\\|");
+                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                if (!date.isBefore(startOfPreviousMonth) && !date.isAfter(endOfPreviousMonth)) {
+                    results.add(line);
+                }
+            }
+
+            System.out.println("\n--- Previous Month Transactions ---");
+            if (results.isEmpty()) {
+                System.out.println("No transactions found in previous month.");
+            } else {
+                for (String transaction : results) {
+                    System.out.println(transaction);
+                }
+            }
+
+            scanner.close();
+        } catch (Exception e) {
+            System.out.println("Error generating previous month report: " + e.getMessage());
+        }
+    }
+    //Year To Date
+    public static void generateYearToDateReport() {
+        try {
+            File file = new File(TRANSACTION_FILE);
+            Scanner scanner = new Scanner(file);
+
+            LocalDate today = LocalDate.now();
+            LocalDate startOfYear = today.withDayOfYear(1);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            List<String> results = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split("\\|");
+                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                if (!date.isBefore(startOfYear) && !date.isAfter(today)) {
+                    results.add(line);
+                }
+            }
+
+            System.out.println("\n--- Year To Date Transactions ---");
+            if (results.isEmpty()) {
+                System.out.println("No transactions found year to date.");
+            } else {
+                for (String transaction : results) {
+                    System.out.println(transaction);
+                }
+            }
+
+            scanner.close();
+        } catch (Exception e) {
+            System.out.println("Error generating year-to-date report: " + e.getMessage());
+        }
+    }
+    //Previous Year
+    public static void generatePreviousYearReport() {
+        try {
+            File file = new File(TRANSACTION_FILE);
+            Scanner scanner = new Scanner(file);
+
+            LocalDate today = LocalDate.now();
+            int previousYear = today.getYear() - 1;
+            LocalDate startOfPreviousYear = LocalDate.of(previousYear, 1, 1);
+            LocalDate endOfPreviousYear = LocalDate.of(previousYear, 12, 31);
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            List<String> results = new ArrayList<>();
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split("\\|");
+                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                if (!date.isBefore(startOfPreviousYear) && !date.isAfter(endOfPreviousYear)) {
+                    results.add(line);
+                }
+            }
+
+            System.out.println("\n--- Previous Year Transactions ---");
+            if (results.isEmpty()) {
+                System.out.println("No transactions found in previous year.");
+            } else {
+                for (String transaction : results) {
+                    System.out.println(transaction);
+                }
+            }
+
+            scanner.close();
+        } catch (Exception e) {
+            System.out.println("Error generating previous year report: " + e.getMessage());
+        }
+    }
+    //Search by vendor option
     public static void searchByVendor(String vendorName) {
         try {
-            File file = new File("transactions.csv");
-            Scanner fileScanner = new Scanner(file);
+            File file = new File(TRANSACTION_FILE);
+            Scanner scanner = new Scanner(file);
             boolean found = false;
 
-            while (fileScanner.hasNextLine()) {
-                String line = fileScanner.nextLine();
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
                 String[] parts = line.split("\\|");
-                if (parts.length >= 4 && parts[3].toLowerCase().contains(vendorName)) {
+                if (parts[3].toLowerCase().contains(vendorName)) {
                     System.out.println(line);
                     found = true;
                 }
@@ -222,9 +390,9 @@ public class AccountingLedgerApp {
                 System.out.println("No transactions found for vendor: " + vendorName);
             }
 
-            fileScanner.close();
+            scanner.close();
         } catch (FileNotFoundException e) {
-            System.out.println("Transaction file not found.");
+            System.out.println("Could not read transactions file.");
         }
     }
 }
