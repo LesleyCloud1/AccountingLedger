@@ -33,6 +33,8 @@ The Ledger View displays all financial transactions, with the most recent ones s
 
 ---
 - 📊 Reports:
+- ![ReportsMenu.png](Screenshots/ReportsMenu.png)
+-
     - Month-to-Date
     - Previous Month
     - Year-to-Date

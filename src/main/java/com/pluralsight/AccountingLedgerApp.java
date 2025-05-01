@@ -10,14 +10,14 @@ import java.util.*;
 
 public class AccountingLedgerApp {
 
-    //Transactions.csv file where all transactions will be stored
+    //Transactions.csv file, all transactions will be stored here
     private static final String TRANSACTION_FILE = "transactions.csv";
 
     //List to keep all transaction records in memory
     private static List<Transaction> transactions = new ArrayList<>();
 
     public static void main(String[] args) {
-        //Check if the file exists; if not, create it
+        //Check if the file exists or create it
         File file = new File(TRANSACTION_FILE);
         if (!file.exists()) {
             try {
@@ -45,55 +45,43 @@ public class AccountingLedgerApp {
             // === Option 1: Deposit ===
             if (choice.equals("1")) {
                 System.out.println("\n--- Make Deposit ---");
-                System.out.print("Date (YYYY-MM-DD): ");
-                String date = scanner.nextLine().trim();
-                System.out.print("Time (HH:MM:SS): ");
-                String time = scanner.nextLine().trim();
-                System.out.print("Description: ");
-                String description = scanner.nextLine().trim();
-                System.out.print("Vendor: ");
-                String vendor = scanner.nextLine().trim();
-                System.out.print("Amount: ");
-                String amount = scanner.nextLine().trim();
+                String date = InputValidator.getValidDate(scanner);
+                String time = InputValidator.getValidTime(scanner);
+                String description = InputValidator.getNonEmptyInput(scanner, "Description");
+                String vendor = InputValidator.getNonEmptyInput(scanner, "Vendor");
+                double amount = InputValidator.getValidAmount(scanner);
 
                 //Save the deposit to file
-                saveTransaction(date, time, description, vendor, amount);
+                saveTransaction(date, time, description, vendor, String.valueOf(amount));
                 System.out.println("Deposit saved!");
-
             }
-            //
+            //Make payment
             else if (choice.equals("2")) {
                 System.out.println("\n--- Make Payment ---");
-                System.out.print("Date (YYYY-MM-DD): ");
-                String date = scanner.nextLine().trim();
-                System.out.print("Time (HH:MM:SS): ");
-                String time = scanner.nextLine().trim();
-                System.out.print("Description: ");
-                String description = scanner.nextLine().trim();
-                System.out.print("Vendor: ");
-                String vendor = scanner.nextLine().trim();
-                System.out.print("Amount: ");
-                String amount = scanner.nextLine().trim();
+                String date = InputValidator.getValidDate(scanner);
+                String time = InputValidator.getValidTime(scanner);
+                String description = InputValidator.getNonEmptyInput(scanner, "Description");
+                String vendor = InputValidator.getNonEmptyInput(scanner, "Vendor");
+                double amount = InputValidator.getValidAmount(scanner);
 
                 //Payments are stored as negative values
-                if (!amount.startsWith("-")) {
-                    amount = "-" + amount;
+                if (amount > 0) {
+                    amount = -amount; //Convert to negative for payments
                 }
 
                 //Save the payment to file
-                saveTransaction(date, time, description, vendor, amount);
+                saveTransaction(date, time, description, vendor, String.valueOf(amount));
                 System.out.println("Payment saved!");
             }
             //View Transactions
             else if (choice.equals("3")) {
                 showLedgerMenu(scanner);
             }
-            //Exit ===
+            //Exit
             else if (choice.equals("4")) {
                 System.out.println("Have a blessed day!");
                 running = false;
-            }
-            else {
+            } else {
                 System.out.println("Invalid option. Try again!");
             }
         }
@@ -146,7 +134,6 @@ public class AccountingLedgerApp {
         }
     }
 
-    //Display type of transactions
     public static void displayTransactions(String type) {
         try {
             File file = new File(TRANSACTION_FILE);
@@ -157,21 +144,38 @@ public class AccountingLedgerApp {
             while (fileScanner.hasNextLine()) {
                 lines.add(fileScanner.nextLine());
             }
-            Collections.reverse(lines); // Show most recent first
+            Collections.reverse(lines); //Show most recent first
 
             boolean found = false;
+            //Print a table header
+            System.out.printf("\n%-12s %-8s %-25s %-20s %12s\n",
+                    "Date", "Time", "Description", "Vendor", "Amount");
+            System.out.println("----------------------------------------------------------------------------");
             for (String line : lines) {
-                String[] parts = line.split("\\|");
-                String amount = parts[4].trim();
+                if (line.trim().isEmpty()) continue;
 
-                if (type.equals("ALL") ||
-                        (type.equals("DEPOSITS") && !amount.startsWith("-")) ||
-                        (type.equals("PAYMENTS") && amount.startsWith("-"))) {
-                    System.out.println(line);
-                    found = true;
+                try {
+                    Transaction transaction = Transaction.fromCSV(line);
+                    double amount = transaction.getAmount();
+
+                    if (type.equals("ALL") ||
+                            (type.equals("DEPOSITS") && amount >= 0) ||
+                            (type.equals("PAYMENTS") && amount < 0)) {
+
+                        //Format amount with commas and two decimal places
+                        String formattedAmount = String.format("%,.2f", amount);
+
+                        System.out.printf("%s | %s | %s | %s | $%s\n",
+                                transaction.getDate(),
+                                transaction.getTime(),
+                                transaction.getDescription(),
+                                transaction.getVendor(),
+                                formattedAmount);
+                        found = true;
+                    }
+                } catch (Exception e) {
                 }
             }
-
             if (!found) {
                 System.out.println("No " + type.toLowerCase() + " transactions found.");
             }
@@ -180,8 +184,7 @@ public class AccountingLedgerApp {
             System.out.println("Could not read transactions file.");
         }
     }
-
-    //Menu fo reports
+    //Menu for reports
     public static void showReportsMenu(Scanner scanner) {
         boolean inReports = true;
 
@@ -237,15 +240,39 @@ public class AccountingLedgerApp {
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                String[] parts = line.split("\\|");
-                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                if ((date.isEqual(startOfMonth) || date.isAfter(startOfMonth)) && date.isBefore(today.plusDays(1))) {
-                    results.add(line);
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\|");
+
+                // Ensure the line has at least 5 parts and the date is valid
+                if (parts.length < 5) {
+                    System.out.println("Skipping malformed line: " + line);
+                    continue;  // Skip malformed lines
+                }
+
+                try {
+                    LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                    // Check if the transaction is within the month-to-date range
+                    if ((date.isEqual(startOfMonth) || date.isAfter(startOfMonth)) && date.isBefore(today.plusDays(1))) {
+                        results.add(line);
+                    }
+                } catch (Exception e) {
+                    // Catch parsing errors and skip the line if it's not a valid date
+                    System.out.println("Skipping invalid date in line: " + line);
+                    continue;
                 }
             }
 
             System.out.println("\n--- Month To Date Transactions ---");
+            System.out.printf("\n%-12s %-8s %-25s %-20s %12s\n",
+                    "Date", "Time", "Description", "Vendor", "Amount");
+            System.out.println("----------------------------------------------------------------------------");
+
             if (results.isEmpty()) {
                 System.out.println("No transactions found this month.");
             } else {
@@ -253,7 +280,6 @@ public class AccountingLedgerApp {
                     System.out.println(transaction);
                 }
             }
-
             scanner.close();
         } catch (Exception e) {
             System.out.println("Error generating report: " + e.getMessage());
@@ -274,15 +300,39 @@ public class AccountingLedgerApp {
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                String[] parts = line.split("\\|");
-                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                if (!date.isBefore(startOfPreviousMonth) && !date.isAfter(endOfPreviousMonth)) {
-                    results.add(line);
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\|");
+
+                // Ensure the line has at least 5 parts and the date is valid
+                if (parts.length < 5) {
+                    System.out.println("Skipping malformed line: " + line);
+                    continue;  // Skip malformed lines
+                }
+
+                try {
+                    LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                    // Check if the transaction is within the previous month range
+                    if (!date.isBefore(startOfPreviousMonth) && !date.isAfter(endOfPreviousMonth)) {
+                        results.add(line);
+                    }
+                } catch (Exception e) {
+                    // Catch parsing errors and skip the line if it's not a valid date
+                    System.out.println("Skipping invalid date in line: " + line);
+                    continue;
                 }
             }
 
             System.out.println("\n--- Previous Month Transactions ---");
+            System.out.printf("\n%-12s %-8s %-25s %-20s %12s\n",
+                    "Date", "Time", "Description", "Vendor", "Amount");
+            System.out.println("----------------------------------------------------------------------------");
+
             if (results.isEmpty()) {
                 System.out.println("No transactions found in previous month.");
             } else {
@@ -290,7 +340,6 @@ public class AccountingLedgerApp {
                     System.out.println(transaction);
                 }
             }
-
             scanner.close();
         } catch (Exception e) {
             System.out.println("Error generating previous month report: " + e.getMessage());
@@ -310,11 +359,31 @@ public class AccountingLedgerApp {
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                String[] parts = line.split("\\|");
-                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                if (!date.isBefore(startOfYear) && !date.isAfter(today)) {
-                    results.add(line);
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\|");
+
+                // Ensure the line has at least 5 parts and the date is valid
+                if (parts.length < 5) {
+                    System.out.println("Skipping malformed line: " + line);
+                    continue;  // Skip malformed lines
+                }
+
+                try {
+                    LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                    // Check if the transaction is within the year-to-date range
+                    if (!date.isBefore(startOfYear) && !date.isAfter(today)) {
+                        results.add(line);
+                    }
+                } catch (Exception e) {
+                    // Catch parsing errors and skip the line if it's not a valid date
+                    System.out.println("Skipping invalid date in line: " + line);
+                    continue;
                 }
             }
 
@@ -332,6 +401,7 @@ public class AccountingLedgerApp {
             System.out.println("Error generating year-to-date report: " + e.getMessage());
         }
     }
+
     //Previous Year
     public static void generatePreviousYearReport() {
         try {
@@ -348,11 +418,31 @@ public class AccountingLedgerApp {
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                String[] parts = line.split("\\|");
-                LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                if (!date.isBefore(startOfPreviousYear) && !date.isAfter(endOfPreviousYear)) {
-                    results.add(line);
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
+                String[] parts = line.split("\\|");
+
+                // Ensure the line has at least 5 parts and the date is valid
+                if (parts.length < 5) {
+                    System.out.println("Skipping malformed line: " + line);
+                    continue;  // Skip malformed lines
+                }
+
+                try {
+                    LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+
+                    // Check if the transaction is within the previous year range
+                    if (!date.isBefore(startOfPreviousYear) && !date.isAfter(endOfPreviousYear)) {
+                        results.add(line);
+                    }
+                } catch (Exception e) {
+                    // Catch parsing errors and skip the line if it's not a valid date
+                    System.out.println("Skipping invalid date in line: " + line);
+                    continue;
                 }
             }
 
@@ -370,6 +460,7 @@ public class AccountingLedgerApp {
             System.out.println("Error generating previous year report: " + e.getMessage());
         }
     }
+
     //Search by vendor option
     public static void searchByVendor(String vendorName) {
         try {
@@ -379,8 +470,22 @@ public class AccountingLedgerApp {
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
+
+                // Skip empty lines
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
+
                 String[] parts = line.split("\\|");
-                if (parts[3].toLowerCase().contains(vendorName)) {
+
+                // Ensure the line has at least 5 parts (date, time, description, vendor, amount)
+                if (parts.length < 5) {
+                    System.out.println("Skipping malformed line: " + line);
+                    continue;  // Skip malformed lines
+                }
+
+                // Check if the vendor name is part of the transaction
+                if (parts[3].toLowerCase().contains(vendorName.toLowerCase())) {
                     System.out.println(line);
                     found = true;
                 }

@@ -1,13 +1,17 @@
 package com.pluralsight;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 public class Transaction {
-    private String date;
+    private LocalDate date;
     private String time;
     private String description;
     private String vendor;
     private double amount;
 
-    public Transaction(String date, String time, String description, String vendor, double amount) {
+    //Constructor
+    public Transaction(LocalDate date, String time, String description, String vendor, double amount) {
         this.date = date;
         this.time = time;
         this.description = description;
@@ -15,19 +19,17 @@ public class Transaction {
         this.amount = amount;
     }
 
-    public String toCSV() {
-        return date + "|" + time + "|" + description + "|" + vendor + "|" + amount;
+    // Getters
+    public LocalDate getDate() {
+        return date;
     }
 
-    public static Transaction fromCSV(String csvLine) {
-        String[] parts = csvLine.split("\\|");
-        return new Transaction(
-                parts[0].trim(),
-                parts[1].trim(),
-                parts[2].trim(),
-                parts[3].trim(),
-                Double.parseDouble(parts[4].trim())
-        );
+    public String getTime() {
+        return time;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public String getVendor() {
@@ -38,11 +40,19 @@ public class Transaction {
         return amount;
     }
 
-    public String getDate() {
-        return date;
-    }
+    // Method to parse a CSV line into a Transaction object
+    public static Transaction fromCSV(String csvLine) {
+        // Split the CSV line
+        String[] parts = csvLine.split("\\|");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-    public String toString() {
-        return toCSV();
+        // Parse the date
+        LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
+        String time = parts[1].trim();
+        String description = parts[2].trim();
+        String vendor = parts[3].trim();
+        double amount = Double.parseDouble(parts[4].trim());
+
+        return new Transaction(date, time, description, vendor, amount);
     }
 }
