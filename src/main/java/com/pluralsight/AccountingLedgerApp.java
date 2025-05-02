@@ -32,7 +32,7 @@ public class AccountingLedgerApp {
         Scanner scanner = new Scanner(System.in);
         boolean running = true;
 
-        // ======= Main Menu Loop =======
+        //Main Menu Loop
         while (running) {
             System.out.println("\n===== Welcome to your Account =====");
             System.out.println("1: Make Deposit");
@@ -42,7 +42,7 @@ public class AccountingLedgerApp {
             System.out.print("Choose option #1-4: ");
             String choice = scanner.nextLine().trim();
 
-            // === Option 1: Deposit ===
+            //Make deposit
             if (choice.equals("1")) {
                 System.out.println("\n--- Make Deposit ---");
                 String date = InputValidator.getValidDate(scanner);
@@ -241,28 +241,28 @@ public class AccountingLedgerApp {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
-                // Skip empty lines
+                //Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
                 String[] parts = line.split("\\|");
 
-                // Ensure the line has at least 5 parts and the date is valid
+                //Ensure the line has at least 5 parts and the date is valid
                 if (parts.length < 5) {
                     System.out.println("Skipping malformed line: " + line);
-                    continue;  // Skip malformed lines
+                    continue;  //Skip malformed lines, I added this cod before implementing Input validator but want to keep
                 }
 
                 try {
                     LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                    // Check if the transaction is within the month-to-date range
+                    //Check if the transaction is within the month-to-date range
                     if ((date.isEqual(startOfMonth) || date.isAfter(startOfMonth)) && date.isBefore(today.plusDays(1))) {
                         results.add(line);
                     }
                 } catch (Exception e) {
-                    // Catch parsing errors and skip the line if it's not a valid date
+                    //Catch parsing errors and skip the line if it's not a valid date
                     System.out.println("Skipping invalid date in line: " + line);
                     continue;
                 }
@@ -301,14 +301,14 @@ public class AccountingLedgerApp {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
-                // Skip empty lines
+                //Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
                 String[] parts = line.split("\\|");
 
-                // Ensure the line has at least 5 parts and the date is valid
+                //Ensure the line has at least 5 parts and the date is valid
                 if (parts.length < 5) {
                     System.out.println("Skipping malformed line: " + line);
                     continue;  // Skip malformed lines
@@ -317,12 +317,12 @@ public class AccountingLedgerApp {
                 try {
                     LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                    // Check if the transaction is within the previous month range
+                    //Check if the transaction is within the previous month range
                     if (!date.isBefore(startOfPreviousMonth) && !date.isAfter(endOfPreviousMonth)) {
                         results.add(line);
                     }
                 } catch (Exception e) {
-                    // Catch parsing errors and skip the line if it's not a valid date
+                    //Catch parsing errors and skip the line if it's not a valid date
                     System.out.println("Skipping invalid date in line: " + line);
                     continue;
                 }
@@ -360,14 +360,14 @@ public class AccountingLedgerApp {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
-                // Skip empty lines
+                //Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
                 String[] parts = line.split("\\|");
 
-                // Ensure the line has at least 5 parts and the date is valid
+                //Ensure the line has at least 5 parts and the date is valid
                 if (parts.length < 5) {
                     System.out.println("Skipping malformed line: " + line);
                     continue;  // Skip malformed lines
@@ -376,12 +376,12 @@ public class AccountingLedgerApp {
                 try {
                     LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                    // Check if the transaction is within the year-to-date range
+                    //Check if the transaction is within the year-to-date range
                     if (!date.isBefore(startOfYear) && !date.isAfter(today)) {
                         results.add(line);
                     }
                 } catch (Exception e) {
-                    // Catch parsing errors and skip the line if it's not a valid date
+                    //Catch parsing errors and skip the line if it's not a valid date
                     System.out.println("Skipping invalid date in line: " + line);
                     continue;
                 }
@@ -419,14 +419,14 @@ public class AccountingLedgerApp {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
-                // Skip empty lines
+                //Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
                 String[] parts = line.split("\\|");
 
-                // Ensure the line has at least 5 parts and the date is valid
+                //Ensure the line has at least 5 parts and the date is valid
                 if (parts.length < 5) {
                     System.out.println("Skipping malformed line: " + line);
                     continue;  // Skip malformed lines
@@ -435,12 +435,12 @@ public class AccountingLedgerApp {
                 try {
                     LocalDate date = LocalDate.parse(parts[0].trim(), formatter);
 
-                    // Check if the transaction is within the previous year range
+                    //Check if the transaction is within the previous year range
                     if (!date.isBefore(startOfPreviousYear) && !date.isAfter(endOfPreviousYear)) {
                         results.add(line);
                     }
                 } catch (Exception e) {
-                    // Catch parsing errors and skip the line if it's not a valid date
+                    //Catch parsing errors and skip the line if it's not a valid date
                     System.out.println("Skipping invalid date in line: " + line);
                     continue;
                 }
@@ -471,20 +471,20 @@ public class AccountingLedgerApp {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
-                // Skip empty lines
+                //Skip empty lines
                 if (line.trim().isEmpty()) {
                     continue;
                 }
 
                 String[] parts = line.split("\\|");
 
-                // Ensure the line has at least 5 parts (date, time, description, vendor, amount)
+                //Ensure the line has at least 5 parts (date, time, description, vendor, amount)
                 if (parts.length < 5) {
                     System.out.println("Skipping malformed line: " + line);
                     continue;  // Skip malformed lines
                 }
 
-                // Check if the vendor name is part of the transaction
+                //Check if the vendor name is part of the transaction
                 if (parts[3].toLowerCase().contains(vendorName.toLowerCase())) {
                     System.out.println(line);
                     found = true;
